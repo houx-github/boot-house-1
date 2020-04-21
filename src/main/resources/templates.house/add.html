@@ -18,6 +18,7 @@
 <form th:action="@{/house/add}"
       method="post"
       enctype="multipart/form-data"
+      id="addForm"
       class="form-horizontal" role="form">
     <!-- 1.省 -->
     <div class="form-group">
@@ -26,6 +27,7 @@
             <select id="province" name="province" class="form-control">
                 <option value="">--请选择--</option>
             </select>
+            <div class="input-group-addon"></div>
         </div>
     </div>
     <!-- 2.市 -->
@@ -77,7 +79,7 @@
     <div class="form-group">
         <label for="rental" class="col-sm-2 control-label">租金</label>
         <div class="col-sm-3">
-            <input type="number" name="rental" id="rental" class="form-control">
+            <input type="number" name="rental" id="rental" class="form-control required">
         </div>
     </div>
     <!-- 8. 地址 -->
@@ -103,5 +105,111 @@
 </form>
 <script th:src="@{/lib/js/jquery/jquery.min.js}"></script>
 <script th:src="@{/lib/bootstrap/js/bootstrap.min.js}"></script>
+<!--jquery效验插件-->
+<script th:src="@{/lib/js/jquery/validate/jquery.validate.min.js}"></script>
+<script th:src="@{/lib/js/jquery/validate/messages_zh.min.js}"></script>
+<script th:inline="javascript">
+    const path=[[${#request.getContextPath}]];
+    const emptyOption="<opton>--请选择--</opton>"
+    $(function () {
+        //加载省
+        House.queryArea('province');
+        //给省的下拉框添加chang事件
+        $('#province').change(function () {
+            //切换省的时候，将市和县的下拉框重置
+            $('#city').html(emptyOption);
+            $('#area').html(emptyOption);
+            //拿到下拉框的value值
+            if (this.value) {
+           House.queryArea('city', this.value);
+         }
+        });
+        //给市的下拉框添加chang事件
+        $('#city').chang(function () {
+           $('#area').html(emptyOption);
+           if(this.value){
+               House.queryArea('area',this.value);
+           }
+        });
+        //加载租赁方式,朝向和户型的字典数据
+        House.queryDict('rent_mode');
+        House.queryDict('orientation');
+        House.queryDict('house_type');
+    });
+    let House={
+        queryArea:function (documentId,pid) {
+            pid=pid || 0;
+            $.ajax({
+               url:path + "/area/queryByPid",
+                type:'get',
+                data:'pid='+ pid,
+                datatype:'json',
+                success:function (res) {
+                   let options="<option value=''>--请选择--</option>"
+                    for(let area of res){
+                    options+="<option value='"+area.id+"'>"
+                        + area.name
+                    "</option>";
+                    }
+                    $("#" +documentId).html(options);
+                }
+            });
+        },
+        queryDict:function (groupId) {
+              $.ajax({
+                 url:path +'/dict/' + groupId,
+                  type:'get',
+                  data:'',
+                  datatype:'json',
+                  success:function (res) {
+                      let options="<option value=''>--请选择--</option>";
+                      $.each(res,function (index,dict) {
+                          option +="<option value='"+ dict.value +"'>" +
+                              dict.name+
+                              "</option>"
+                      });
+                      //为租赁方式，户型和朝向的下拉框赋值
+                      $('#' +groupId).html(options);
+                  }
+              });
+        },
+        //校验表单项
+        validateForm:function () {
+            $('#addForm').validate({
+                debug:false,
+                submitHandler:function (form) {
+                  alert('检验成功');
+                },
+                //修改提示信息的元素类型
+                errorElement:'div',
+               errorPlacement:function (errorEle,validateEle) {
+                   errorEle.address('input-group-addon');
+                   errorEle.append(validateEle.parent());
+               },
+               //校验成功后
+                success:function (msqElement) {
+                    msgElement.addClass('input-group-addon').text('ok');
+                },
+               //校验规则rules
+                rules:{
+                    province:required,//对name属性为Provice的表单进行校验
+                    address:{
+                        required:true,//住址必填
+                        maxlength:'10'
+                    },
+                },
+
+                //校验失败后的规则:message
+                message:{
+                    province:'省为必填项',
+                    address:{
+                        required:'必填项',
+                        maxlength:'10个字符以内'
+                    }
+                },
+            });
+        }
+    };
+</script>
 </body>
 </html>
